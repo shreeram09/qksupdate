@@ -102,4 +102,12 @@ class PersonRepositoryTest {
 //        assertEquals(managed.getId(),detached.getId());
 //        assertEquals("Haryana",detached.getCity());
     }
+
+    @Test
+    void givenString_whenFunctionInHQL_returnsFormattedString(){
+        var hql = "from Person p where function('replace',city,'#',' ') like '%n'";
+        var result = repository.getEntityManager().createQuery(hql,Person.class).getResultList().stream().findFirst();
+        assertNotNull(result);
+        result.ifPresent(System.out::println);
+    }
 }

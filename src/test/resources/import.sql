@@ -1,0 +1,1 @@
+INSERT INTO upgrade.person (id,name, city) VALUES (nextval('person_id_seq'),'frank', 'i#am#in#basildon');
