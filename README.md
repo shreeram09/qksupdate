@@ -51,4 +51,14 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 
 You can then execute your native executable with: `./target/qksupdate-1.0.0-SNAPSHOT-runner`
 
+## Migrating quarkus-bom to latest version
+execute below maven goal and observe the output
+```shell
+./mvnw quarkus:update
+```
+this takes help of openrewrite plugin which uses recipe got generated at `%USERPROFILE%/AppData/Local/Temp/` 
+```shell
+./mvnw.cmd -B -e org.openrewrite.maven:rewrite-maven-plugin:5.39.0:run -DplainTextMasks=**/META-INF/services/**,**/*.txt,**/src/main/codestarts/**/*.java,**/*.md,**/*.kt,**/src/test/resources/__snapshots__/**/*.java,**/*.adoc -Drewrite.configLocation=quarkus-project-recipe.yaml -Drewrite.recipeArtifactCoordinates=io.quarkus:quarkus-update-recipes:1.0.22 -DactiveRecipes=io.quarkus.openrewrite.Quarkus -Drewrite.pomCacheEnabled=false
+
+```
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
