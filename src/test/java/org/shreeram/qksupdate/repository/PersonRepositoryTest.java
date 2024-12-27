@@ -48,16 +48,23 @@ class PersonRepositoryTest {
         assertEquals("Uttarakhand",detached.getCity());
     }
 
-    @Test/*given domain with id , should add unmanaged entity (merge)*/
+    /**
+     * given domain with id , should add unmanaged entity (merge)
+     * earlier merge used to insert record if id/primary-key is not found even with GeneratedValue(Auto) strategy for Id
+     * with recent Hibernate 6.6.x version merge is now more restrictive on primary-key
+     * for optimistic transaction locking
+     * */
+    @Test
     @TestTransaction
     void givenDomainId_whenSave_addUnmanagedRow(){
         var domain = PersonHelper.getPersonDomain();
         var unmanaged = mapper.mapToEntity(domain);
-        unmanaged.setId(2L);
+        //commented as with generatedValue strategy for id, merge expecting row with given id/primary-key in database
+        //else throws OptimisticLockException : Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect)
+        //unmanaged.setId(2L);
         unmanaged.setCity("Uttarakhand");
         var managed = repository.save(unmanaged);
         assertNotNull(managed);
-        assertEquals(unmanaged.getId(),managed.getId());
         assertEquals("Uttarakhand",managed.getCity());
     }
 
@@ -109,9 +116,17 @@ class PersonRepositoryTest {
         Log.errorv("type: {0}, message: {1}",e.getClass().getName(),e.getMessage());
     }
 
+    /**
+     * strict type checking introduced since Quarkus 3.7 with hibernate 6.4.x,
+     * so this test case while using function('db_function') in HQL
+     * since it returns java.lang.Object while query parsing,
+     * here db_function could be any inbuilt or userdefined function
+     * eg. function('replace',col_name,'charToRemove','charToReplace')<br>
+     * issue:<a href="https://github.com/hibernate/hibernate-orm/pull/7275">HHH-1678</a>
+     * */
     @Test
     void givenString_whenFunctionInHQL_returnsFormattedString(){
-        var hql = "from Person p where function('replace',lower(city),' ','') like '%n'";
+        var hql = "from Person p where replace(lower(city),' ','') like '%n'";
         var result = repository.getEntityManager()
                 .createQuery(hql,Person.class)
                 .setMaxResults(1)
