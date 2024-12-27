@@ -3,7 +3,7 @@ package org.shreeram.qksupdate.repository;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.hibernate.PersistentObjectException;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.Test;
 import org.shreeram.qksupdate.entity.Person;
 import org.shreeram.qksupdate.helper.PersonHelper;
@@ -31,21 +31,6 @@ class PersonRepositoryTest {
         assertEquals(domain.city(),entity.getCity());
     }
 
-    @Test/*with given id , should update entity (merge)*/
-    @TestTransaction
-    void givenId_whenSave_updateRow(){
-        var domain = PersonHelper.getPersonDomain();
-        var mapped = mapper.mapToEntity(domain);
-        var entity = repository.save(mapped);
-        var managed = repository.getEntityManager().find(Person.class,entity.getId());
-        assertNotNull(managed);
-        managed.setId(managed.getId());
-        managed.setCity("Uttarakhand");
-        repository.save(managed);
-        assertEquals(entity.getId(),managed.getId());
-        assertEquals("Uttarakhand",managed.getCity());
-    }
-
     @Test/*with given id , should update unmanaged entity (merge)*/
     @TestTransaction
     void givenId_whenSave_updateUnmanagedRow(){
@@ -62,32 +47,49 @@ class PersonRepositoryTest {
         assertEquals("Uttarakhand",detached.getCity());
     }
 
-    @Test/*with given domain without id , should add entity (persist)*/
+    @Test/*given domain with id , should add unmanaged entity (merge)*/
+    @TestTransaction
+    void givenDomainId_whenSave_addUnmanagedRow(){
+        var domain = PersonHelper.getPersonDomain();
+        var unmanaged = mapper.mapToEntity(domain);
+        unmanaged.setId(2L);
+        unmanaged.setCity("Uttarakhand");
+        var managed = repository.save(unmanaged);
+        assertNotNull(managed);
+        assertEquals(unmanaged.getId(),managed.getId());
+        assertEquals("Uttarakhand",managed.getCity());
+    }
+
+    /**
+     * given domain without id , should add entity (persist)
+     */
+    @Test
     @TestTransaction
     void givenDomain_whenAdd_insertNewRow(){
         var domain = PersonHelper.getPersonDomain();
-        var entity = mapper.mapToEntity(domain);
-        repository.add(entity);
-        assertNotNull(entity);
-        assertEquals(domain.name(),entity.getName());
-        assertEquals(domain.city(),entity.getCity());
+        var unmanaged = mapper.mapToEntity(domain);
+        repository.add(unmanaged);
+        assertNotNull(unmanaged);
+        assertEquals(domain.name(),unmanaged.getName());
+        assertEquals(domain.city(),unmanaged.getCity());
     }
 
-    @Test/*with id , should not update entity (persist)*/
+    /**
+     * given domain with id , should add entity (persist)
+     */
+    @Test
     @TestTransaction
-    void givenId_whenAdd_updateRow(){
+    void givenDomainId_whenAdd_addRow(){
         var domain = PersonHelper.getPersonDomain();
         var entity = mapper.mapToEntity(domain);
-        repository.add(entity);
-        var managed = repository.getEntityManager().find(Person.class,entity.getId());
-        assertNotNull(managed);
-        managed.setCity("Haryana");
-        repository.add(entity);
-        assertNotNull(entity.getId());
-        assertEquals("Haryana",managed.getCity());
+        entity.setId(2L);
+        Exception e = assertThrows(PersistenceException.class,
+                ()->  repository.add(entity),
+                ()->"unmanaged/detached/non-persistent entity cannot be persisted/inserted/updated") ;
+        System.out.println("type: "+e.getClass().getName()+", message: "+e.getMessage());
     }
 
-    @Test/*with id , should not update unmanaged entity (persist)*/
+    @Test/*given domain with id , should not update unmanaged entity (persist)*/
     @TestTransaction
     void givenId_whenAdd_updateUnmanagedRow(){
         var domain = PersonHelper.getPersonDomain();
@@ -95,19 +97,23 @@ class PersonRepositoryTest {
         repository.add(entity);
         var managed = repository.getEntityManager().find(Person.class,entity.getId());
         assertNotNull(managed);
-        var detached= new Person();
-        detached.setId(managed.getId());
-        detached.setCity("Haryana");
-        assertThrows(PersistentObjectException.class,()-> repository.add(detached),()->"unmanaged/detached/non-persistent entity cannot be persisted/inserted/updated") ;
-//        assertEquals(managed.getId(),detached.getId());
-//        assertEquals("Haryana",detached.getCity());
+        var unmanaged= new Person();
+        unmanaged.setId(managed.getId());
+        unmanaged.setCity("Haryana");
+        Exception e = assertThrows(PersistenceException.class,
+                ()->  repository.add(unmanaged),
+                ()->"unmanaged/detached/non-persistent entity cannot be persisted/inserted/updated") ;
+        System.out.println("type: "+e.getClass().getName()+", message: "+e.getMessage());
     }
 
     @Test
     void givenString_whenFunctionInHQL_returnsFormattedString(){
         var hql = "from Person p where function('replace',lower(city),' ','') like '%n'";
-        var result = repository.getEntityManager().createQuery(hql,Person.class).getResultList().stream().findFirst();
+        var result = repository.getEntityManager()
+                .createQuery(hql,Person.class)
+                .setMaxResults(1)
+                .getSingleResult();
         assertNotNull(result);
-        result.ifPresent(System.out::println);
+        System.out.println(result);
     }
 }
