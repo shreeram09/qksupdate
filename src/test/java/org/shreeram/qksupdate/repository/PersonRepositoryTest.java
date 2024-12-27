@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.shreeram.qksupdate.entity.Person;
 import org.shreeram.qksupdate.helper.PersonHelper;
 import org.shreeram.qksupdate.mapper.PersonMapper;
+import io.quarkus.logging.Log;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,7 +87,7 @@ class PersonRepositoryTest {
         Exception e = assertThrows(PersistenceException.class,
                 ()->  repository.add(entity),
                 ()->"unmanaged/detached/non-persistent entity cannot be persisted/inserted/updated") ;
-        System.out.println("type: "+e.getClass().getName()+", message: "+e.getMessage());
+        Log.errorv("type: {0}, message: {1}",e.getClass().getName(),e.getMessage());
     }
 
     @Test/*given domain with id , should not update unmanaged entity (persist)*/
@@ -98,12 +99,14 @@ class PersonRepositoryTest {
         var managed = repository.getEntityManager().find(Person.class,entity.getId());
         assertNotNull(managed);
         var unmanaged= new Person();
+        Log.infov("is persistent: {0}",repository.isPersistent(unmanaged));
         unmanaged.setId(managed.getId());
+        Log.infov("is persistent: {0}",repository.isPersistent(unmanaged));
         unmanaged.setCity("Haryana");
         Exception e = assertThrows(PersistenceException.class,
                 ()->  repository.add(unmanaged),
                 ()->"unmanaged/detached/non-persistent entity cannot be persisted/inserted/updated") ;
-        System.out.println("type: "+e.getClass().getName()+", message: "+e.getMessage());
+        Log.errorv("type: {0}, message: {1}",e.getClass().getName(),e.getMessage());
     }
 
     @Test
@@ -114,6 +117,6 @@ class PersonRepositoryTest {
                 .setMaxResults(1)
                 .getSingleResult();
         assertNotNull(result);
-        System.out.println(result);
+        Log.infov("found {0}",result);
     }
 }
