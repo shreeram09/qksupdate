@@ -12,7 +12,8 @@ public class PersonRepository implements PanacheRepository<Person> {
         return getEntityManager().merge(person);
     }
 
-    public void add(Person person){
+    public Boolean add(Person person){
         getEntityManager().persist(person);
+        return isPersistent(person);
     }
 }

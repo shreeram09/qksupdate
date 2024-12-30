@@ -7,6 +7,8 @@ import org.shreeram.qksupdate.domain.Person;
 import org.shreeram.qksupdate.mapper.PersonMapper;
 import org.shreeram.qksupdate.repository.PersonRepository;
 
+import java.util.List;
+
 @ApplicationScoped
 public class MyBusiness {
     @Inject
@@ -19,5 +21,15 @@ public class MyBusiness {
     public org.shreeram.qksupdate.entity.Person save(Person person){
         var entity = mapper.mapToEntity(person);
         return resource.save(entity);
+    }
+
+    public List<org.shreeram.qksupdate.entity.Person> search(){
+        return resource.findAll().list();
+    }
+
+    @Transactional
+    public Boolean add(Person person){
+        var entity = mapper.mapToEntity(person);
+        return resource.add(entity);
     }
 }
